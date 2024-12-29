@@ -30,19 +30,18 @@ if __name__ == "__main__":
     train_data = load_data('data/raw_data/train.csv')
     valid_data = load_data('data/raw_data/valid.csv')
 
-    # Check the column names to identify the correct column for documents and queries
+    # Check the column names to confirm
     print(train_data.columns)
 
-    # Adjust according to the actual column names for query and passage/document
+    # Preprocess queries and passages
     train_data['query'] = train_data['query'].apply(preprocess_text)
-    train_data['document'] = train_data['document'].apply(preprocess_text)  # Update to correct column name
+    train_data['finalpassage'] = train_data['finalpassage'].apply(preprocess_text)  # Correct column name for document
 
     valid_data['query'] = valid_data['query'].apply(preprocess_text)
-    valid_data['document'] = valid_data['document'].apply(preprocess_text)  # Update to correct column name
+    valid_data['finalpassage'] = valid_data['finalpassage'].apply(preprocess_text)  # Correct column name for document
 
     # Create embeddings for documents
-    train_embeddings = create_embeddings(train_data['document'].tolist())
-    valid_embeddings = create_embeddings(valid_data['document'].tolist())
+    train_embeddings = create_embeddings(train_data['finalpassage'].tolist())
+    valid_embeddings = create_embeddings(valid_data['finalpassage'].tolist())
 
-    # Save embeddings if needed
-    # You can save embeddings to disk for later use (e.g., using pickle or numpy)
+    # Optionally, save embeddings to disk for later use (e.g., with pickle or numpy)
