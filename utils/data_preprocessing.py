@@ -12,10 +12,13 @@ from nltk.corpus import stopwords
 
 # Preprocess text: lowercase, remove punctuation, and stopwords
 def preprocess_text(text):
-    text = text.lower()
-    text = ''.join([char for char in text if char not in string.punctuation])
-    stop_words = set(stopwords.words('english'))
-    text = ' '.join([word for word in text.split() if word not in stop_words])
+    if isinstance(text, str):  # Ensure text is a string
+        text = text.lower()
+        text = ''.join([char for char in text if char not in string.punctuation])
+        stop_words = set(stopwords.words('english'))
+        text = ' '.join([word for word in text.split() if word not in stop_words])
+    else:
+        text = ''  # Handle non-string values (e.g., NaN)
     return text
 
 # Create embeddings for queries or documents
@@ -29,9 +32,6 @@ def load_data(file_path):
 if __name__ == "__main__":
     train_data = load_data('data/raw_data/train.csv')
     valid_data = load_data('data/raw_data/valid.csv')
-
-    # Check the column names to confirm
-    print(train_data.columns)
 
     # Preprocess queries and passages
     train_data['query'] = train_data['query'].apply(preprocess_text)
