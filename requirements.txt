@@ -1,0 +1,5 @@
+transformers
+torch
+faiss-cpu
+sentence-transformers
+requests
