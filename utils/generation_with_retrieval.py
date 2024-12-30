@@ -51,8 +51,11 @@ retrieved_context = " ".join(retrieved_docs['finalpassage'].values)
 # Prepare input text for T5 (e.g., as a question-answer format)
 input_text = f"Answer this question: {query} Context: {retrieved_context}"
 
-# Tokenize and generate output
-input_ids = tokenizer.encode(input_text, return_tensors="pt")
+# Tokenize and truncate input to fit within the model's max length (512 tokens for T5)
+max_length = 512
+input_ids = tokenizer.encode(input_text, return_tensors="pt", max_length=max_length, truncation=True)
+
+# Generate output
 output = model.generate(input_ids)
 
 # Decode and print the response
