@@ -2,7 +2,7 @@ import string
 import nltk
 from sentence_transformers import SentenceTransformer
 import pandas as pd
-
+import numpy as np
 # Initialize sentence-transformers model for embeddings
 model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
 
@@ -45,3 +45,11 @@ if __name__ == "__main__":
     valid_embeddings = create_embeddings(valid_data['finalpassage'].tolist())
 
     # Optionally, save embeddings to disk for later use (e.g., with pickle or numpy)
+
+
+# Example: Save embeddings to disk for reuse
+    np.save('data/processed_data/train_embeddings.npy', train_embeddings)
+    np.save('data/processed_data/valid_embeddings.npy', valid_embeddings)
+
+# Load saved embeddings when needed
+    train_embeddings = np.load('data/processed_data/train_embeddings.npy')
