@@ -1,15 +1,11 @@
+import os
 import faiss
 import numpy as np
 import pandas as pd
 from sentence_transformers import SentenceTransformer
-import os
-
-# Create directories if they do not exist
-os.makedirs("data/processed_data", exist_ok=True)
 
 # Load processed embeddings
 train_embeddings = np.load('D:/RAG-GenAI/data/processed_data/train_embeddings.npy')
-valid_embeddings = np.load('D:/RAG-GenAI/data/processed_data/valid_embeddings.npy')
 
 # Load the dataset (assumes preprocessed)
 train_data = pd.read_csv('D:/RAG-GenAI/data/raw_data/train.csv')  # Adjust paths if needed
@@ -21,6 +17,15 @@ index.add(train_embeddings)  # Add train embeddings to FAISS index
 
 print(f"FAISS index contains {index.ntotal} documents.")
 
+# Ensure processed_data directory exists
+processed_data_path = "D:/RAG-GenAI/data/processed_data"
+if not os.path.exists(processed_data_path):
+    os.makedirs(processed_data_path)
+
+# Save the FAISS index
+faiss.write_index(index, os.path.join(processed_data_path, "faiss_index.idx"))
+print(f"FAISS index saved to {processed_data_path}/faiss_index.idx")
+
 # Define function to retrieve similar documents
 def retrieve_similar_documents(query_embedding, k=5):
     query_embedding = np.array(query_embedding).astype('float32').reshape(1, -1)
@@ -31,7 +36,6 @@ def retrieve_similar_documents(query_embedding, k=5):
 def get_documents_by_indices(dataframe, indices):
     return dataframe.iloc[indices.flatten()]
 
-# Example usage
 if __name__ == "__main__":
     # Load SentenceTransformer model for embedding queries
     model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
@@ -49,6 +53,3 @@ if __name__ == "__main__":
     retrieved_docs = get_documents_by_indices(train_data, indices)
     print("Retrieved Documents:")
     print(retrieved_docs[['query', 'finalpassage']])  # Adjust columns as needed
-    faiss.write_index(index, "data/processed_data/faiss_index.idx")
-# To load it later:
-    index = faiss.read_index("data/processed_data/faiss_index.idx")
