@@ -15,7 +15,7 @@ class RetrievalModel:
         if not os.path.exists(self.index_path):
             raise FileNotFoundError(f"FAISS index file not found at {self.index_path}")
         self.index = faiss.read_index(self.index_path)
-        print("FAISS index loaded successfully.")
+        print(f"FAISS index loaded successfully with dimension: {self.index.d}")
 
     def load_metadata(self):
         """Load metadata corresponding to the FAISS index."""
@@ -29,6 +29,12 @@ class RetrievalModel:
         """Retrieve top-k results from the FAISS index for a given query vector."""
         if self.index is None or self.metadata is None:
             raise ValueError("Index and metadata must be loaded before retrieval.")
+
+        # Debugging: Print query vector dimensions
+        print(f"Query vector shape: {query_vector.shape}")
+        assert query_vector.shape[1] == self.index.d, (
+            f"Dimension mismatch: query_vector ({query_vector.shape[1]}) vs FAISS index ({self.index.d})"
+        )
 
         distances, indices = self.index.search(query_vector, top_k)
         results = []
@@ -58,9 +64,15 @@ if __name__ == "__main__":
     # Example query vector (replace with actual vector)
     example_query_vector = np.random.rand(1, 768).astype('float32')
 
-    # Retrieve top-k results
-    top_k_results = retrieval_model.retrieve(example_query_vector, top_k=5)
+    # Debugging: Print the expected dimensions
+    print(f"Expected FAISS index dimension: {retrieval_model.index.d}")
 
-    # Display the results
-    for result in top_k_results:
-        print(f"Distance: {result['distance']}, Metadata: {result['metadata']}")
+    # Retrieve top-k results
+    try:
+        top_k_results = retrieval_model.retrieve(example_query_vector, top_k=5)
+
+        # Display the results
+        for result in top_k_results:
+            print(f"Distance: {result['distance']}, Metadata: {result['metadata']}")
+    except AssertionError as e:
+        print(f"Error: {e}")
