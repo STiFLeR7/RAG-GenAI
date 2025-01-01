@@ -2,13 +2,16 @@ import os
 import faiss
 import numpy as np
 import json
+from transformers import T5Tokenizer, T5ForConditionalGeneration
 
 class RetrievalModel:
-    def __init__(self, index_path: str, metadata_path: str):
+    def __init__(self, index_path: str, metadata_path: str, generation_model_name: str):
         self.index_path = index_path
         self.metadata_path = metadata_path
         self.index = None
         self.metadata = None
+        self.tokenizer = T5Tokenizer.from_pretrained(generation_model_name)
+        self.generation_model = T5ForConditionalGeneration.from_pretrained(generation_model_name)
 
     def load_index(self):
         """Load the FAISS index from the specified path."""
@@ -50,27 +53,47 @@ class RetrievalModel:
 
         return results
 
+    def generate_response(self, query: str, top_k: int = 5):
+        """Generate a response based on retrieved documents and the query."""
+        query_vector = self.encode_query(query)
+        retrieved_docs = self.retrieve(query_vector, top_k)
+
+        # Concatenate the top-k documents into a context
+        context = " ".join([doc['metadata']['finalpassage'] for doc in retrieved_docs if 'metadata' in doc])
+        input_text = f"Query: {query} Context: {context}"
+
+        # Tokenize and generate response
+        input_ids = self.tokenizer.encode(input_text, return_tensors="pt", max_length=512, truncation=True)
+        output_ids = self.generation_model.generate(input_ids, max_length=150, num_beams=5, early_stopping=True)
+        response = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
+
+        return response, retrieved_docs
+
+    def encode_query(self, query: str):
+        """Encode a query into a vector using the retrieval model."""
+        # Example placeholder for encoding logic, replace with your actual encoder
+        return np.random.rand(1, self.index.d).astype('float32')
+
 if __name__ == "__main__":
     INDEX_PATH = "../data/processed_data/faiss_index.idx"
     METADATA_PATH = "../data/processed_data/metadata.json"
+    GENERATION_MODEL_NAME = "t5-small"
 
     # Initialize the retrieval model
-    retrieval_model = RetrievalModel(INDEX_PATH, METADATA_PATH)
+    retrieval_model = RetrievalModel(INDEX_PATH, METADATA_PATH, GENERATION_MODEL_NAME)
 
-    # Load the index and metadata
+    # Load the index, metadata, and generation model
     retrieval_model.load_index()
     retrieval_model.load_metadata()
 
-    # Example query vector with corrected dimensions
-    example_query_vector = np.random.rand(1, 384).astype('float32')
+    # Example query
+    user_query = "What is AI?"
 
-    # Retrieve top-k results
-    try:
-        top_k_results = retrieval_model.retrieve(example_query_vector, top_k=5)
+    # Generate response
+    response, retrieved_docs = retrieval_model.generate_response(user_query, top_k=5)
 
-        # Display the results
-        for result in top_k_results:
-            print(f"Distance: {result['distance']}, Metadata: {result['metadata']}")
-    except AssertionError as e:
-        print(f"Error: {e}")
+    print("\nRetrieved Documents:")
+    for doc in retrieved_docs:
+        print(f"Distance: {doc['distance']}, Metadata: {doc['metadata']}")
 
+    print("\nGenerated Response:", response)
