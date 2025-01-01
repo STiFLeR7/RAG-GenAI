@@ -63,19 +63,25 @@ class RetrievalModel:
         return context
 
     def generate_response(self, query: str, top_k: int = 5):
-        """Generate a response based on retrieved documents and the query."""
+        """Generate a refined response based on retrieved documents and the query."""
         query_vector = self.encode_query(query)
         retrieved_docs = self.retrieve(query_vector, top_k)
 
-        # Concatenate the top-k documents into a context
-        context = " ".join([doc['metadata']['finalpassage'] for doc in retrieved_docs if 'metadata' in doc])
-        summarized_context = self.summarize_context(context, max_length=150)
+        # Filter and prioritize relevant documents
+        relevant_docs = [doc['metadata']['finalpassage'] for doc in retrieved_docs if 'metadata' in doc]
+        if not relevant_docs:
+            return "No relevant information found.", retrieved_docs
 
-        input_text = f"Query: {query} Context: {summarized_context}"
+        # Concatenate and summarize the context
+        concatenated_context = " ".join(relevant_docs[:3])  # Use top 3 documents for context
+        summarized_context = self.summarize_context(concatenated_context, max_length=150)
+
+        # Create an explicit prompt for concise response generation
+        input_text = f"Provide a concise answer: {query} Context: {summarized_context}"
 
         # Tokenize and generate response
         input_ids = self.tokenizer.encode(input_text, return_tensors="pt", max_length=512, truncation=True)
-        output_ids = self.generation_model.generate(input_ids, max_length=150, num_beams=5, early_stopping=True)
+        output_ids = self.generation_model.generate(input_ids, max_length=100, num_beams=5, early_stopping=True)
         response = self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
 
         return response, retrieved_docs
