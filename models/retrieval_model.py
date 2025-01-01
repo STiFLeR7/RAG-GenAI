@@ -3,6 +3,7 @@ import faiss
 import numpy as np
 import json
 from transformers import T5Tokenizer, T5ForConditionalGeneration
+from transformers import pipeline
 
 class RetrievalModel:
     def __init__(self, index_path: str, metadata_path: str, generation_model_name: str):
@@ -12,6 +13,7 @@ class RetrievalModel:
         self.metadata = None
         self.tokenizer = T5Tokenizer.from_pretrained(generation_model_name)
         self.generation_model = T5ForConditionalGeneration.from_pretrained(generation_model_name)
+        self.summarizer = pipeline("summarization", model=generation_model_name, tokenizer=generation_model_name)
 
     def load_index(self):
         """Load the FAISS index from the specified path."""
@@ -53,6 +55,13 @@ class RetrievalModel:
 
         return results
 
+    def summarize_context(self, context: str, max_length: int = 100):
+        """Summarize the context to fit within a specified token length."""
+        if len(context.split()) > max_length:
+            summary = self.summarizer(context, max_length=max_length, min_length=30, truncation=True)
+            return summary[0]['summary_text']
+        return context
+
     def generate_response(self, query: str, top_k: int = 5):
         """Generate a response based on retrieved documents and the query."""
         query_vector = self.encode_query(query)
@@ -60,7 +69,9 @@ class RetrievalModel:
 
         # Concatenate the top-k documents into a context
         context = " ".join([doc['metadata']['finalpassage'] for doc in retrieved_docs if 'metadata' in doc])
-        input_text = f"Query: {query} Context: {context}"
+        summarized_context = self.summarize_context(context, max_length=150)
+
+        input_text = f"Query: {query} Context: {summarized_context}"
 
         # Tokenize and generate response
         input_ids = self.tokenizer.encode(input_text, return_tensors="pt", max_length=512, truncation=True)
