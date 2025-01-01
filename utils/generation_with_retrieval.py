@@ -1,63 +1,48 @@
-from transformers import T5Tokenizer, T5ForConditionalGeneration
-import faiss
-import numpy as np
-import pandas as pd
+import json
 from sentence_transformers import SentenceTransformer
+from transformers import T5Tokenizer, T5ForConditionalGeneration
+import numpy as np
+import faiss
+import pandas as pd
 
-# Load preprocessed data and FAISS index
-train_embeddings = np.load('D:/RAG-GenAI/data/processed_data/train_embeddings.npy')  # Adjust path if needed
-train_data = pd.read_csv('D:/RAG-GenAI/data/raw_data/train.csv')  # Adjust path if needed
+# Model and FAISS setup
+retrieval_model = SentenceTransformer("models/retrieval_model")
+generation_model_name = "models/generation_model"
+generation_model = T5ForConditionalGeneration.from_pretrained(generation_model_name)
+tokenizer = T5Tokenizer.from_pretrained(generation_model_name)
 
-# Initialize FAISS index
-embedding_dim = train_embeddings.shape[1]
-index = faiss.IndexFlatL2(embedding_dim)
-index.add(train_embeddings)  # Add train embeddings to FAISS index
+faiss_index_path = "data/processed_data/faiss_index.idx"
+data_path = "data/processed_data/processed_data.json"
 
-# Load T5 model and tokenizer
-model_name = "t5-small"
-tokenizer = T5Tokenizer.from_pretrained(model_name)
-model = T5ForConditionalGeneration.from_pretrained(model_name)
+# Load FAISS index
+faiss_index = faiss.read_index(faiss_index_path)
+with open(data_path, "r") as f:
+    data = json.load(f)
 
-# Load SentenceTransformer model for embedding queries
-sentence_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
+# Retrieval function
+def retrieve_top_k(query, k=5):
+    query_embedding = retrieval_model.encode(query).reshape(1, -1).astype("float32")
+    distances, indices = faiss_index.search(query_embedding, k)
+    top_k_docs = [data[i]["finalpassage"] for i in indices[0]]
+    return top_k_docs, distances, indices
 
-# Define function to retrieve similar documents
-def retrieve_similar_documents(query_embedding, k=5):
-    query_embedding = np.array(query_embedding).astype('float32').reshape(1, -1)
-    distances, indices = index.search(query_embedding, k)  # Search the FAISS index
-    return distances, indices
+# Generate response
+def generate_response(query):
+    top_docs, distances, indices = retrieve_top_k(query)
+    context = " ".join(top_docs)
+    input_text = f"Query: {query} Context: {context}"
+    input_ids = tokenizer.encode(input_text, return_tensors="pt", max_length=512, truncation=True)
+    output_ids = generation_model.generate(input_ids, max_length=100, num_beams=5, early_stopping=True)
+    response = tokenizer.decode(output_ids[0], skip_special_tokens=True)
+    return response, distances, indices
 
-# Helper to fetch documents by indices
-def get_documents_by_indices(dataframe, indices):
-    return dataframe.iloc[indices.flatten()]
-
-# Example query
-query = "What is AI?"
-query_embedding = sentence_model.encode([query])[0]  # Generate query embedding
-
-# Retrieve top 5 similar documents
-distances, indices = retrieve_similar_documents(query_embedding, k=5)
-print("Top 5 similar document distances:", distances)
-print("Top 5 similar document indices:", indices)
-
-# Fetch and print the actual documents
-retrieved_docs = get_documents_by_indices(train_data, indices)
-print("Retrieved Documents:")
-print(retrieved_docs[['query', 'finalpassage']])  # Adjust columns as needed
-
-# Concatenate retrieved documents' text to form a context for the generative model
-retrieved_context = " ".join(retrieved_docs['finalpassage'].values)
-
-# Prepare input text for T5 (e.g., as a question-answer format)
-input_text = f"Answer this question: {query} Context: {retrieved_context}"
-
-# Tokenize and truncate input to fit within the model's max length (512 tokens for T5)
-max_length = 512
-input_ids = tokenizer.encode(input_text, return_tensors="pt", max_length=max_length, truncation=True)
-
-# Generate output
-output = model.generate(input_ids)
-
-# Decode and print the response
-response = tokenizer.decode(output[0], skip_special_tokens=True)
-print("Generated Response:", response)
+# Main execution
+if __name__ == "__main__":
+    user_query = input("Enter your query: ")
+    response, distances, indices = generate_response(user_query)
+    print("\nTop 5 similar document distances:", distances)
+    print("Top 5 similar document indices:", indices)
+    print("\nRetrieved Documents:")
+    for i, doc in enumerate(retrieve_top_k(user_query)[0], start=1):
+        print(f"{i}: {doc}")
+    print("\nGenerated Response:", response)
