@@ -29,27 +29,35 @@ def create_embeddings(documents):
 def load_data(file_path):
     return pd.read_csv(file_path)
 
+import json
+
+# After preprocessing the data and generating embeddings
 if __name__ == "__main__":
-    train_data = load_data('data/raw_data/train.csv')
-    valid_data = load_data('data/raw_data/valid.csv')
+    train_data = load_data('D:/RAG-GenAI/data/raw_data/train.csv')
+    valid_data = load_data('D:/RAG-GenAI/data/raw_data/valid.csv')
 
     # Preprocess queries and passages
     train_data['query'] = train_data['query'].apply(preprocess_text)
-    train_data['finalpassage'] = train_data['finalpassage'].apply(preprocess_text)  # Correct column name for document
-
+    train_data['finalpassage'] = train_data['finalpassage'].apply(preprocess_text)
+    
     valid_data['query'] = valid_data['query'].apply(preprocess_text)
-    valid_data['finalpassage'] = valid_data['finalpassage'].apply(preprocess_text)  # Correct column name for document
+    valid_data['finalpassage'] = valid_data['finalpassage'].apply(preprocess_text)
 
     # Create embeddings for documents
     train_embeddings = create_embeddings(train_data['finalpassage'].tolist())
     valid_embeddings = create_embeddings(valid_data['finalpassage'].tolist())
 
-    # Optionally, save embeddings to disk for later use (e.g., with pickle or numpy)
+    # Save embeddings to disk
+    np.save('D:/RAG-GenAI/data/processed_data/train_embeddings.npy', train_embeddings)
+    np.save('D:/RAG-GenAI/data/processed_data/valid_embeddings.npy', valid_embeddings)
 
+    # Save metadata
+    metadata = {
+        str(i): {"query": train_data['query'][i], "finalpassage": train_data['finalpassage'][i]}
+        for i in range(len(train_data))
+    }
+    with open('D:/RAG-GenAI/data/processed_data/metadata.json', 'w', encoding='utf-8') as f:
+        json.dump(metadata, f, indent=4)
 
-# Example: Save embeddings to disk for reuse
-    np.save('data/processed_data/train_embeddings.npy', train_embeddings)
-    np.save('data/processed_data/valid_embeddings.npy', valid_embeddings)
+    print("Metadata saved to D:/RAG-GenAI/data/processed_data/metadata.json.")
 
-# Load saved embeddings when needed
-    train_embeddings = np.load('data/processed_data/train_embeddings.npy')
