@@ -61,11 +61,8 @@ if __name__ == "__main__":
     retrieval_model.load_index()
     retrieval_model.load_metadata()
 
-    # Example query vector (replace with actual vector)
-    example_query_vector = np.random.rand(1, 768).astype('float32')
-
-    # Debugging: Print the expected dimensions
-    print(f"Expected FAISS index dimension: {retrieval_model.index.d}")
+    # Example query vector with corrected dimensions
+    example_query_vector = np.random.rand(1, 384).astype('float32')
 
     # Retrieve top-k results
     try:
@@ -76,3 +73,4 @@ if __name__ == "__main__":
             print(f"Distance: {result['distance']}, Metadata: {result['metadata']}")
     except AssertionError as e:
         print(f"Error: {e}")
+
