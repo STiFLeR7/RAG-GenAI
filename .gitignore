@@ -9,3 +9,6 @@ data/*
 # Ignore temporary files
 *.tmp
 *.temp
+
+data/*
+!data/.gitignore
