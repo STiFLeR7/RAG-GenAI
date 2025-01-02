@@ -85,6 +85,17 @@ Launch the system to process queries and generate responses:
 **4. Evaluation:**
 
 • Evaluates the quality of responses using metrics like ROUGE, BLEU, and METEOR.
+## Training Summary
+
+• **Training Loss:** ~0.272
+
+• **Evaluation Loss:** ~0.383
+
+• **Runtime:**
+
+ • Training: 3 hours, 25 minutes
+
+ • Evaluation: 212 seconds (~3.5 minutes)
 ## 🌟 Evaluation
 ### Metrics Used:
 
