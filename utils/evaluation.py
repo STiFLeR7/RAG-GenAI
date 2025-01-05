@@ -93,6 +93,10 @@ def fine_tune_t5(data_path, output_dir):
     # Load dataset
     data = pd.read_csv(data_path)
 
+    # Clean dataset
+    data = data.dropna(subset=['answer'])  # Drop rows with missing answers
+    data['answer'] = data['answer'].astype(str).str.strip()  # Ensure all answers are strings
+
     # Split into training and validation sets
     train_data, eval_data = train_test_split(data, test_size=0.2, random_state=42)
 
@@ -160,7 +164,7 @@ if __name__ == "__main__":
     print(f"ROUGE: {rouge}")
 
     # Example Usage for Fine-Tuning
-    data_path = "D:/RAG-GenAI/data/fine_tuning_data.csv"
+    data_path = "D:/RAG-GenAI/data/fine_tuning_data_coqa.csv"
     output_dir = "D:/RAG-GenAI/models/t5_fine_tuned"
 
     fine_tune_t5(data_path, output_dir)
