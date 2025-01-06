@@ -1,9 +1,0 @@
-transformers
-torch
-faiss-cpu
-sentence-transformers
-requests
-nltk
-rouge-score
-sentence-transformers
-transformers[torch]
